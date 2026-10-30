@@ -8,7 +8,15 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/ecommerce.css">
+  <script src="js/version.js"></script>
+  <script>
+    (function () {
+      var stylesheet = document.createElement('link');
+      stylesheet.rel = 'stylesheet';
+      stylesheet.href = 'css/ecommerce.css?v=' + encodeURIComponent(PAYLOAD_VERSION);
+      document.head.appendChild(stylesheet);
+    })();
+  </script>
 </head>
 <body>
   <header class="site-header">
@@ -53,7 +61,17 @@
     </article>
   </div>
 
-  <footer class="site-footer"><div class="container">SIGA · Catálogo digital</div></footer>
-  <script type="module" src="js/catalogo.js"></script>
+  <footer class="site-footer"><div class="container">SIGA · Catálogo digital <span id="site-version"></span></div></footer>
+  <script>
+    (function () {
+      var version = typeof PAYLOAD_VERSION !== 'undefined' ? PAYLOAD_VERSION : '1.0.0';
+      var versionElement = document.getElementById('site-version');
+      if (versionElement) versionElement.textContent = 'v' + version;
+      var module = document.createElement('script');
+      module.type = 'module';
+      module.src = 'js/catalogo.js?v=' + encodeURIComponent(version);
+      document.body.appendChild(module);
+    })();
+  </script>
 </body>
 </html>
