@@ -62,9 +62,21 @@ function renderProducts() {
   $('#catalog-status').textContent = '';
   container.innerHTML = state.products.map(product => {
     const image = product.imagenPrincipalUrl ? `<img src="${esc(mediaUrl(product.imagenPrincipalUrl))}" alt="${esc(product.nombre)}" loading="lazy">` : '<span class="placeholder">✦</span>';
-    return `<article class="product-card"><div class="product-image">${image}${product.multimedia?.length ? `<span class="media-count">${product.multimedia.length} archivo${product.multimedia.length === 1 ? '' : 's'}</span>` : ''}</div><div class="product-info"><div class="product-category">${esc(product.categoriaNombre || 'Producto')}</div><h3 class="product-name">${esc(product.nombre)}</h3><p class="product-description">${esc(product.descripcion || 'Conoce más detalles de este producto.')}</p><div class="product-bottom"><span class="price">${money(product.precio)}</span><button class="button" data-product="${product.idProducto}">Ver producto</button></div></div></article>`;
+    return `<article class="product-card" data-product-card="${product.idProducto}" tabindex="0" role="button" aria-label="Ver ${esc(product.nombre)}"><div class="product-image">${image}${product.multimedia?.length ? `<span class="media-count">${product.multimedia.length} archivo${product.multimedia.length === 1 ? '' : 's'}</span>` : ''}</div><div class="product-info"><div class="product-category">${esc(product.categoriaNombre || 'Producto')}</div><h3 class="product-name">${esc(product.nombre)}</h3><p class="product-description">${esc(product.descripcion || 'Conoce más detalles de este producto.')}</p><div class="product-bottom"><span class="price">${money(product.precio)}</span><a class="button whatsapp" href="${whatsappUrl(product)}" target="_blank" rel="noopener" data-whatsapp>Comprar por WhatsApp ↗</a></div></div></article>`;
   }).join('');
-  container.querySelectorAll('[data-product]').forEach(button => button.addEventListener('click', () => openProduct(button.dataset.product)));
+  container.querySelectorAll('[data-product-card]').forEach(card => {
+    const open = () => openProduct(card.dataset.productCard);
+    card.addEventListener('click', event => {
+      if (event.target.closest('[data-whatsapp]')) return;
+      open();
+    });
+    card.addEventListener('keydown', event => {
+      if ((event.key === 'Enter' || event.key === ' ') && !event.target.closest('[data-whatsapp]')) {
+        event.preventDefault();
+        open();
+      }
+    });
+  });
 }
 
 function renderPagination() {
