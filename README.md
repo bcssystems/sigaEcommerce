@@ -11,10 +11,10 @@ sudo mkdir -p /var/www/siga/ecommerce
 sudo git clone https://github.com/bcssystems/sigaEcommerce.git /var/www/siga/ecommerce
 ```
 
-El frontend consume el API público de SIGA en:
+El frontend consume el API público de SIGA en el mismo dominio:
 
 ```text
-https://sigademo.omisoltec.mx/api/v1
+https://sigashop.omisoltec.mx/api/v1
 ```
 
 El backend debe permitir `https://sigashop.omisoltec.mx` en CORS.

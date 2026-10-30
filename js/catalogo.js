@@ -1,6 +1,6 @@
 const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://localhost:8040/api/v1'
-  : 'https://sigademo.omisoltec.mx/api/v1';
+  : 'https://sigashop.omisoltec.mx/api/v1';
 const MEDIA_BASE = API_BASE.replace(/\/api\/v1\/?$/, '');
 const WHATSAPP = '5215634861468';
 const state = { category: '', search: '', page: 0, size: 24, pages: 0, products: [], categories: [], activeProduct: null };
