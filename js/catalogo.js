@@ -109,4 +109,12 @@ function handleHash() { const id = window.location.hash.match(/^#producto-(\d+)$
 function showStatus(message, error = false) { const status = $('#catalog-status'); status.textContent = message; status.classList.toggle('error', error); }
 function debounce(callback, delay) { let timer; return (...args) => { clearTimeout(timer); timer = setTimeout(() => callback(...args), delay); }; }
 
-document.addEventListener('DOMContentLoaded', init);
+function startCatalogo() {
+  init();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startCatalogo, { once: true });
+} else {
+  startCatalogo();
+}
