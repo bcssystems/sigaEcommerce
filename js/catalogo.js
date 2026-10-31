@@ -3,7 +3,7 @@ const API_BASE = window.location.hostname === 'localhost' || window.location.hos
   : 'https://sigashop.omisoltec.mx/api/v1';
 const MEDIA_BASE = API_BASE.replace(/\/api\/v1\/?$/, '');
 const WHATSAPP = '5215634861468';
-const state = { category: '', search: '', page: 0, size: 24, pages: 0, products: [], categories: [], activeProduct: null };
+const state = { category: '', search: '', page: 0, size: 24, pages: 0, hasMore: true, loading: false, products: [], categories: [], activeProduct: null };
 
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>'"]/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[character]));
@@ -18,29 +18,43 @@ async function request(path) {
 }
 
 async function init() {
-  $('#search').addEventListener('input', debounce(() => { state.search = $('#search').value.trim(); state.page = 0; loadProducts(); }, 300));
+  $('#search').addEventListener('input', debounce(() => { state.search = $('#search').value.trim(); loadProducts(true); }, 300));
   document.querySelectorAll('[data-close-modal]').forEach(element => element.addEventListener('click', closeModal));
   try {
     state.categories = await request('/catalogo/categorias');
     renderCategories();
-    await loadProducts();
+    setupInfiniteScroll();
+    await loadProducts(true);
   } catch (error) { showStatus(error.message, true); }
   window.addEventListener('hashchange', handleHash);
   handleHash();
 }
 
-async function loadProducts() {
-  showStatus('Cargando productos...');
+async function loadProducts(reset = true) {
+  if (state.loading || (!reset && !state.hasMore)) return;
+  if (reset) {
+    state.page = 0;
+    state.pages = 0;
+    state.hasMore = true;
+    state.products = [];
+    $('#products').innerHTML = '';
+    showStatus('Cargando productos...');
+  }
+  state.loading = true;
   const params = new URLSearchParams({ page: state.page, size: state.size, sort: 'nombre,asc' });
   if (state.search) params.set('search', state.search);
   if (state.category) params.set('idCategoria', state.category);
   try {
     const result = await request('/catalogo/productos?' + params);
-    state.products = result.content || [];
+    const products = result.content || [];
+    state.products = reset ? products : state.products.concat(products);
     state.pages = result.totalPages || 0;
+    state.hasMore = !result.last && products.length > 0;
+    state.page = (result.number ?? state.page) + 1;
     renderProducts();
     renderPagination();
   } catch (error) { showStatus(error.message, true); }
+  finally { state.loading = false; }
 }
 
 function renderCategories() {
@@ -52,7 +66,7 @@ function renderCategories() {
     state.category = button.dataset.category;
     state.page = 0;
     document.querySelectorAll('.category-button').forEach(item => item.classList.toggle('active', item === button));
-    loadProducts();
+    loadProducts(true);
   });
 }
 
@@ -62,7 +76,7 @@ function renderProducts() {
   $('#catalog-status').textContent = '';
   container.innerHTML = state.products.map(product => {
     const image = product.imagenPrincipalUrl ? `<img src="${esc(mediaUrl(product.imagenPrincipalUrl))}" alt="${esc(product.nombre)}" loading="lazy">` : '<span class="placeholder">✦</span>';
-    return `<article class="product-card" data-product-card="${product.idProducto}" tabindex="0" role="button" aria-label="Ver ${esc(product.nombre)}"><div class="product-image">${image}${product.multimedia?.length ? `<span class="media-count">${product.multimedia.length} archivo${product.multimedia.length === 1 ? '' : 's'}</span>` : ''}</div><div class="product-info"><div class="product-category">${esc(product.categoriaNombre || 'Producto')}</div><h3 class="product-name">${esc(product.nombre)}</h3><p class="product-description">${esc(product.descripcion || 'Conoce más detalles de este producto.')}</p><div class="product-bottom"><span class="price">${money(product.precio)}</span><a class="button whatsapp" href="${whatsappUrl(product)}" target="_blank" rel="noopener" data-whatsapp>Comprar por WhatsApp ↗</a></div></div></article>`;
+   return `<article class="product-card" data-product-card="${product.idProducto}" tabindex="0" role="button" aria-label="Ver ${esc(product.nombre)}"><div class="product-image">${image}</div><div class="product-info"><div class="product-category">${esc(product.categoriaNombre || 'Producto')}</div><h3 class="product-name">${esc(product.nombre)}</h3><div class="product-bottom"><span class="price">${money(product.precio)}</span><a class="button whatsapp" href="${whatsappUrl(product)}" target="_blank" rel="noopener" data-whatsapp>Comprar por WhatsApp ↗</a></div></div></article>`;
   }).join('');
   container.querySelectorAll('[data-product-card]').forEach(card => {
     const open = () => openProduct(card.dataset.productCard);
@@ -80,10 +94,16 @@ function renderProducts() {
 }
 
 function renderPagination() {
-  const container = $('#pagination');
-  if (state.pages <= 1) { container.innerHTML = ''; return; }
-  container.innerHTML = Array.from({ length: state.pages }, (_, index) => `<button class="page-button ${index === state.page ? 'active' : ''}" data-page="${index}">${index + 1}</button>`).join('');
-  container.querySelectorAll('[data-page]').forEach(button => button.addEventListener('click', () => { state.page = Number(button.dataset.page); loadProducts(); window.scrollTo({ top: $('#catalogo').offsetTop - 80, behavior: 'smooth' }); }));
+  $('#pagination').innerHTML = '';
+}
+
+function setupInfiniteScroll() {
+  const sentinel = $('#catalog-sentinel');
+  if (!sentinel || !('IntersectionObserver' in window)) return;
+  const observer = new IntersectionObserver(entries => {
+    if (entries.some(entry => entry.isIntersecting)) loadProducts(false);
+  }, { rootMargin: '500px 0px' });
+  observer.observe(sentinel);
 }
 
 async function openProduct(id) {
