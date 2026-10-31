@@ -97,11 +97,30 @@ function renderDetail() {
   const product = state.activeProduct;
   const media = product.multimedia || [];
   const images = media.filter(item => item.tipo === 'IMAGEN');
-  const first = images[0];
-  const main = first ? `<img src="${esc(mediaUrl(first.url))}" alt="${esc(product.nombre)}">` : '<span class="placeholder">✦</span>';
-  const thumbs = images.map((item, index) => `<button class="detail-thumb ${index === 0 ? 'active' : ''}" data-media-url="${esc(item.url)}"><img src="${esc(mediaUrl(item.url))}" alt=""></button>`).join('');
+  const first = media.find(item => item.esPrincipal && item.tipo === 'IMAGEN') || images[0] || media[0];
+  const main = first ? renderMediaPreview(first, product.nombre) : '<span class="placeholder">✦</span>';
+  const thumbs = media.map((item, index) => `<button class="detail-thumb ${item.idMultimedia === first?.idMultimedia ? 'active' : ''}" data-media-id="${item.idMultimedia}" aria-label="Abrir archivo ${index + 1}">${renderMediaThumb(item)}</button>`).join('');
   $('#product-detail').innerHTML = `<div class="detail-gallery"><div id="detail-main-media" class="detail-main-media">${main}</div><div class="detail-thumbs">${thumbs}</div></div><div class="detail-copy"><div class="product-category">${esc(product.categoriaNombre || 'Producto')}</div><h2 id="modal-title">${esc(product.nombre)}</h2><p>${esc(product.descripcion || 'Solicita más información sobre este producto por WhatsApp.')}</p><div class="detail-price">${money(product.precio)}</div><a class="button whatsapp" href="${whatsappUrl(product)}" target="_blank" rel="noopener">Comprar ahora por WhatsApp ↗</a></div>`;
-  $('#product-detail').querySelectorAll('[data-media-url]').forEach(button => button.addEventListener('click', () => { $('#detail-main-media').innerHTML = `<img src="${esc(mediaUrl(button.dataset.mediaUrl))}" alt="${esc(product.nombre)}">`; document.querySelectorAll('.detail-thumb').forEach(item => item.classList.toggle('active', item === button)); }));
+  $('#product-detail').querySelectorAll('[data-media-id]').forEach(button => button.addEventListener('click', () => {
+    const selected = media.find(item => String(item.idMultimedia) === button.dataset.mediaId);
+    if (!selected) return;
+    $('#detail-main-media').innerHTML = renderMediaPreview(selected, product.nombre);
+    document.querySelectorAll('.detail-thumb').forEach(item => item.classList.toggle('active', item === button));
+  }));
+}
+
+function renderMediaPreview(media, productName) {
+  const url = esc(mediaUrl(media.url));
+  if (media.tipo === 'VIDEO') return `<video src="${url}" controls playsinline preload="metadata"></video>`;
+  if (media.tipo === 'DOCUMENTO') return `<div class="detail-document"><iframe src="${url}" title="${esc(media.nombreArchivo || 'Documento PDF')}"></iframe><a href="${url}" target="_blank" rel="noopener">Abrir PDF en otra pestaña ↗</a></div>`;
+  return `<img src="${url}" alt="${esc(productName)}">`;
+}
+
+function renderMediaThumb(media) {
+  const url = esc(mediaUrl(media.url));
+  if (media.tipo === 'VIDEO') return '<span class="media-thumb-icon">▶</span>';
+  if (media.tipo === 'DOCUMENTO') return '<span class="media-thumb-icon pdf">PDF</span>';
+  return `<img src="${url}" alt="">`;
 }
 
 function closeModal() { $('#product-modal').classList.add('hidden'); window.location.hash = ''; }
