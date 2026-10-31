@@ -98,15 +98,23 @@ function renderDetail() {
   const media = product.multimedia || [];
   const images = media.filter(item => item.tipo === 'IMAGEN');
   const first = media.find(item => item.esPrincipal && item.tipo === 'IMAGEN') || images[0] || media[0];
+  let activeIndex = Math.max(0, media.findIndex(item => item.idMultimedia === first?.idMultimedia));
   const main = first ? renderMediaPreview(first, product.nombre) : '<span class="placeholder">✦</span>';
-  const thumbs = media.map((item, index) => `<button class="detail-thumb ${item.idMultimedia === first?.idMultimedia ? 'active' : ''}" data-media-id="${item.idMultimedia}" aria-label="Abrir archivo ${index + 1}">${renderMediaThumb(item)}</button>`).join('');
-  $('#product-detail').innerHTML = `<div class="detail-gallery"><div id="detail-main-media" class="detail-main-media">${main}</div><div class="detail-thumbs">${thumbs}</div></div><div class="detail-copy"><div class="product-category">${esc(product.categoriaNombre || 'Producto')}</div><h2 id="modal-title">${esc(product.nombre)}</h2><p>${esc(product.descripcion || 'Solicita más información sobre este producto por WhatsApp.')}</p><div class="detail-price">${money(product.precio)}</div><a class="button whatsapp" href="${whatsappUrl(product)}" target="_blank" rel="noopener">Comprar ahora por WhatsApp ↗</a></div>`;
-  $('#product-detail').querySelectorAll('[data-media-id]').forEach(button => button.addEventListener('click', () => {
-    const selected = media.find(item => String(item.idMultimedia) === button.dataset.mediaId);
-    if (!selected) return;
-    $('#detail-main-media').innerHTML = renderMediaPreview(selected, product.nombre);
-    document.querySelectorAll('.detail-thumb').forEach(item => item.classList.toggle('active', item === button));
-  }));
+  const thumbs = media.map((item, index) => `<button class="detail-thumb ${index === activeIndex ? 'active' : ''}" data-media-index="${index}" aria-label="Abrir archivo ${index + 1}">${renderMediaThumb(item)}</button>`).join('');
+  const arrows = media.length > 1 ? '<button class="detail-arrow detail-arrow-prev" type="button" aria-label="Archivo anterior">‹</button><button class="detail-arrow detail-arrow-next" type="button" aria-label="Siguiente archivo">›</button>' : '';
+  $('#product-detail').innerHTML = `<div class="detail-gallery"><div class="detail-thumbs">${thumbs}</div><div class="detail-main-media">${arrows}<div id="detail-media-content">${main}</div></div></div><div class="detail-copy"><div class="product-category">${esc(product.categoriaNombre || 'Producto')}</div><h2 id="modal-title">${esc(product.nombre)}</h2><p>${esc(product.descripcion || 'Solicita más información sobre este producto por WhatsApp.')}</p><div class="detail-price">${money(product.precio)}</div><a class="button whatsapp" href="${whatsappUrl(product)}" target="_blank" rel="noopener">Comprar ahora por WhatsApp ↗</a></div>`;
+  const selectMedia = (nextIndex, direction) => {
+    if (!media.length) return;
+    activeIndex = (nextIndex + media.length) % media.length;
+    const selected = media[activeIndex];
+    const content = $('#detail-media-content');
+    content.className = 'media-changing ' + (direction === 'prev' ? 'media-enter-prev' : 'media-enter-next');
+    content.innerHTML = renderMediaPreview(selected, product.nombre);
+    document.querySelectorAll('.detail-thumb').forEach((item, index) => item.classList.toggle('active', index === activeIndex));
+  };
+  $('#product-detail').querySelectorAll('[data-media-index]').forEach(button => button.addEventListener('click', () => selectMedia(Number(button.dataset.mediaIndex), Number(button.dataset.mediaIndex) < activeIndex ? 'prev' : 'next')));
+  $('#product-detail').querySelector('.detail-arrow-prev')?.addEventListener('click', () => selectMedia(activeIndex - 1, 'prev'));
+  $('#product-detail').querySelector('.detail-arrow-next')?.addEventListener('click', () => selectMedia(activeIndex + 1, 'next'));
 }
 
 function renderMediaPreview(media, productName) {
