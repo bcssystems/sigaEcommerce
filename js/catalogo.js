@@ -9,6 +9,7 @@ const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>'"]/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[character]));
 const mediaUrl = url => url ? MEDIA_BASE + url : '';
 const money = value => value == null ? 'Consultar precio' : new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value);
+const stock = product => `${new Intl.NumberFormat('es-MX', { maximumFractionDigits: 2 }).format(Number(product.stockActual ?? 0))}${product.unidadMedida ? ` ${esc(product.unidadMedida)}` : ''}`;
 const whatsappUrl = product => 'https://wa.me/' + WHATSAPP + '?text=' + encodeURIComponent('Hola, me interesa este producto, ' + product.nombre);
 
 async function request(path) {
@@ -76,7 +77,7 @@ function renderProducts() {
   $('#catalog-status').textContent = '';
   container.innerHTML = state.products.map(product => {
     const image = product.imagenPrincipalUrl ? `<img src="${esc(mediaUrl(product.imagenPrincipalUrl))}" alt="${esc(product.nombre)}" loading="lazy">` : '<span class="placeholder">✦</span>';
-   return `<article class="product-card" data-product-card="${product.idProducto}" tabindex="0" role="button" aria-label="Ver ${esc(product.nombre)}"><div class="product-image">${image}</div><div class="product-info"><div class="product-category">${esc(product.categoriaNombre || 'Producto')}</div><h3 class="product-name">${esc(product.nombre)}</h3><div class="product-bottom"><span class="price">${money(product.precio)}</span><a class="button whatsapp" href="${whatsappUrl(product)}" target="_blank" rel="noopener" data-whatsapp>Comprar por WhatsApp ↗</a></div></div></article>`;
+    return `<article class="product-card" data-product-card="${product.idProducto}" tabindex="0" role="button" aria-label="Ver ${esc(product.nombre)}"><div class="product-image">${image}</div><div class="product-info"><div class="product-category">${esc(product.categoriaNombre || 'Producto')}</div><h3 class="product-name">${esc(product.nombre)}</h3><div class="product-stock">Stock: ${stock(product)}</div><div class="product-bottom"><span class="price">${money(product.precio)}</span><a class="button whatsapp" href="${whatsappUrl(product)}" target="_blank" rel="noopener" data-whatsapp>Comprar por WhatsApp ↗</a></div></div></article>`;
   }).join('');
   container.querySelectorAll('[data-product-card]').forEach(card => {
     const open = () => openProduct(card.dataset.productCard);
@@ -122,7 +123,7 @@ function renderDetail() {
   const main = first ? renderMediaPreview(first, product.nombre) : '<span class="placeholder">✦</span>';
   const thumbs = media.map((item, index) => `<button class="detail-thumb ${index === activeIndex ? 'active' : ''}" data-media-index="${index}" aria-label="Abrir archivo ${index + 1}">${renderMediaThumb(item)}</button>`).join('');
   const arrows = media.length > 1 ? '<button class="detail-arrow detail-arrow-prev" type="button" aria-label="Archivo anterior">‹</button><button class="detail-arrow detail-arrow-next" type="button" aria-label="Siguiente archivo">›</button>' : '';
-  $('#product-detail').innerHTML = `<div class="detail-gallery"><div class="detail-thumbs">${thumbs}</div><div class="detail-main-media">${arrows}<div id="detail-media-content">${main}</div></div></div><div class="detail-copy"><div class="product-category">${esc(product.categoriaNombre || 'Producto')}</div><h2 id="modal-title">${esc(product.nombre)}</h2><p>${esc(product.descripcion || 'Solicita más información sobre este producto por WhatsApp.')}</p><div class="detail-price">${money(product.precio)}</div><a class="button whatsapp" href="${whatsappUrl(product)}" target="_blank" rel="noopener">Comprar ahora por WhatsApp ↗</a></div>`;
+  $('#product-detail').innerHTML = `<div class="detail-gallery"><div class="detail-thumbs">${thumbs}</div><div class="detail-main-media">${arrows}<div id="detail-media-content">${main}</div></div></div><div class="detail-copy"><div class="product-category">${esc(product.categoriaNombre || 'Producto')}</div><h2 id="modal-title">${esc(product.nombre)}</h2><p>${esc(product.descripcion || 'Solicita más información sobre este producto por WhatsApp.')}</p><div class="detail-stock">Stock disponible: ${stock(product)}</div><div class="detail-price">${money(product.precio)}</div><a class="button whatsapp" href="${whatsappUrl(product)}" target="_blank" rel="noopener">Comprar ahora por WhatsApp ↗</a></div>`;
   const selectMedia = (nextIndex, direction) => {
     if (!media.length) return;
     activeIndex = (nextIndex + media.length) % media.length;
